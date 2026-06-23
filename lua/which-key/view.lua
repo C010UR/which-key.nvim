@@ -269,16 +269,16 @@ end
 ---@return wk.Segment[]
 function M.category_separator(name, width)
   local dw = vim.fn.strdisplaywidth
+  local hl = "WhichKeyBorder"
+  local left = "─"
   local label = " " .. name .. " "
-  local label_w = dw(label)
-  width = math.max(width, label_w)
-  local remaining = width - label_w
-  local left_w = math.floor(remaining / 2)
-  local right_w = remaining - left_w
+  local used = dw(left) + dw(label)
+  width = math.max(width, used + 1)
+  local right_w = width - used
   return {
-    { str = string.rep("─", left_w), hl = "WhichKeyBorder" },
-    { str = label, hl = "WhichKeyCategory" },
-    { str = string.rep("─", right_w), hl = "WhichKeyBorder" },
+    { str = left, hl = hl },
+    { str = label, hl = hl },
+    { str = string.rep("─", right_w), hl = hl },
   }
 end
 
@@ -459,11 +459,15 @@ function M.show()
     text:nl()
   end
 
+  local show_categories = #sections > 1
+
   for _, section in ipairs(sections) do
-    text:append(string.rep(" ", Config.win.padding[2]))
-    text:append(M.category_separator(section.name, row_width))
-    text:append(string.rep(" ", Config.win.padding[2]))
-    text:nl()
+    if show_categories then
+      text:append(string.rep(" ", Config.win.padding[2]))
+      text:append(M.category_separator(section.name, row_width))
+      text:append(string.rep(" ", Config.win.padding[2]))
+      text:nl()
+    end
     render_grid(section.items)
   end
   text:trim()
