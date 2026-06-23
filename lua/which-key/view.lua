@@ -266,14 +266,20 @@ end
 
 ---@param name string
 ---@param width number
----@return string
+---@return wk.Segment[]
 function M.category_separator(name, width)
   local dw = vim.fn.strdisplaywidth
-  local line = "-- " .. name .. " "
-  while dw(line) < width do
-    line = line .. "-"
-  end
-  return line
+  local label = " " .. name .. " "
+  local label_w = dw(label)
+  width = math.max(width, label_w)
+  local remaining = width - label_w
+  local left_w = math.floor(remaining / 2)
+  local right_w = remaining - left_w
+  return {
+    { str = string.rep("─", left_w), hl = "WhichKeyBorder" },
+    { str = label, hl = "WhichKeyCategory" },
+    { str = string.rep("─", right_w), hl = "WhichKeyBorder" },
+  }
 end
 
 ---@param items wk.Item[]
@@ -412,8 +418,7 @@ function M.show()
   local _, _, max_row_width = t:cells()
   local box_width = Layout.dim(max_row_width, container.width, Config.layout.width)
   local box_count = math.max(math.floor(container.width / (box_width + Config.layout.spacing)), 1)
-  box_width = math.floor(container.width / box_count)
-  local separator_width = box_count * box_width + (box_count - 1) * Config.layout.spacing
+  local row_width = box_count * max_row_width + math.max(0, box_count - 1) * Config.layout.spacing
 
   local sections = M.categorize(items, state.node)
 
@@ -421,7 +426,7 @@ function M.show()
   local function render_grid(section_items)
     M.sort(section_items)
     local layout = Layout.new({ cols = cols, rows = section_items })
-    local box_height = math.max(math.ceil(#section_items / box_count), 2)
+    local box_height = math.max(math.ceil(#section_items / box_count), 1)
     local rows = layout:layout({ width = box_width - Config.layout.spacing })
     for l = 1, box_height do
       text:append(string.rep(" ", Config.win.padding[2]))
@@ -454,12 +459,9 @@ function M.show()
     text:nl()
   end
 
-  for i, section in ipairs(sections) do
-    if i > 1 then
-      text:nl()
-    end
+  for _, section in ipairs(sections) do
     text:append(string.rep(" ", Config.win.padding[2]))
-    text:append(M.category_separator(section.name, separator_width), "WhichKeyCategory")
+    text:append(M.category_separator(section.name, row_width))
     text:append(string.rep(" ", Config.win.padding[2]))
     text:nl()
     render_grid(section.items)
