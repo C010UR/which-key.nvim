@@ -33,6 +33,7 @@ FEATURES                                   *which-key.nvim-which-key-features*
     Every mode can be enabled/disabled.
 - **Customizable Layouts**: choose from `classic`, `modern`, and `helix` presets or customize the window.
 - **Flexible Sorting**: sort by `local`, `order`, `group`, `alphanum`, `mod`, `lower`, `icase`, `desc`, or `manual`.
+- **Categories**: group mappings into labeled sections per prefix, with custom category and item ordering.
 - **Formatting**: customizable key labels and descriptions
 - **Icons**: integrates with mini.icons <https://github.com/echasnovski/mini.icons> and nvim-web-devicons <https://github.com/nvim-tree/nvim-web-devicons>
 - **Delay**: delay is independent of `timeoutlen`
@@ -180,6 +181,9 @@ Default Options ~
       --- * manual: the order the mappings were added
       --- * case: lower-case first
       sort = { "local", "order", "group", "alphanum", "mod" },
+      category = {
+        default = "Other", -- category for mappings without an explicit category
+      },
       ---@type number|fun(node: wk.Node):boolean?
       expand = 0, -- expand groups when <= n mappings
       -- expand = function(node)
@@ -287,6 +291,9 @@ A mapping has the following attributes:
 - **[2]**: (`string|fun()`) rhs **(optional)**: when present, it will create the mapping
 - **desc**: (`string|fun():string`) description **(required for non-groups)**
 - **group**: (`string|fun():string`) group name **(optional)**
+- **category**: (`string`) category section for the current popup **(optional, inherited)**
+- **order**: (`number`) sort priority within a category **(optional, inherited)**
+- **category_order**: (`string[]`) category order for a group popup **(optional, group only)**
 - **mode**: (`string|string[]`) mode **(optional, defaults to "n")**
 - **cond**: (`boolean|fun():boolean`) condition to enable the mapping **(optional)**
 - **hidden**: (`boolean`) hide the mapping **(optional)**
@@ -308,10 +315,15 @@ The `expand` property allows to create dynamic mappings. Only functions as
 >lua
     local wk = require("which-key")
     wk.add({
+      {
+        "<leader>",
+        group = "Leader",
+        category_order = { "Files", "Git", "Search", "Other" },
+      },
       { "<leader>f", group = "file" }, -- group
-      { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find File", mode = "n" },
-      { "<leader>fb", function() print("hello") end, desc = "Foobar" },
-      { "<leader>fn", desc = "New File" },
+      { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find File", mode = "n", category = "Search", order = 1 },
+      { "<leader>fb", function() print("hello") end, desc = "Foobar", category = "Search", order = 2 },
+      { "<leader>fn", desc = "New File", category = "Files" },
       { "<leader>f1", hidden = true }, -- hide this keymap
       { "<leader>w", proxy = "<c-w>", group = "windows" }, -- proxy to window mappings
       { "<leader>b", group = "buffers", expand = function()
@@ -324,10 +336,15 @@ The `expand` property allows to create dynamic mappings. Only functions as
         -- There's no limit to the depth of nesting
         mode = { "n", "v" }, -- NORMAL and VISUAL mode
         { "<leader>q", "<cmd>q<cr>", desc = "Quit" }, -- no need to specify mode since it's inherited
-        { "<leader>w", "<cmd>w<cr>", desc = "Write" },
+        { "<leader>w", "<cmd>w<cr>", desc = "Write" }, -- goes to the default "Other" category
       }
     })
 <
+
+Mappings without a `category` are shown in the default category (`Other` by default).
+Use `category_order` on a group to control section order for that prefix.
+Within each category, items are sorted with `Config.sort`. Use `order` for explicit
+priority, or include `"manual"` in `sort` to preserve registration order.
 
 
 TRIGGERS                                   *which-key.nvim-which-key-triggers*
@@ -468,6 +485,9 @@ their default link.
 
   WhichKeyBorder          FloatBorder             Border of the which-key
                                                   window
+
+  WhichKeyCategory        Comment                 category separator in the
+                                                  popup
 
   WhichKeyDesc            Identifier              description
 

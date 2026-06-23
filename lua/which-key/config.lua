@@ -94,6 +94,9 @@ local defaults = {
   --- * manual: the order the mappings were added
   --- * case: lower-case first
   sort = { "local", "order", "group", "alphanum", "mod" },
+  category = {
+    default = "Other", -- category for mappings without an explicit category
+  },
   ---@type number|fun(node: wk.Node):boolean?
   expand = 0, -- expand groups when <= n mappings
   -- expand = function(node)

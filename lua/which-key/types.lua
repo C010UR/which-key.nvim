@@ -60,6 +60,9 @@
 ---@field icon? wk.Icon|string
 ---@field proxy? string
 ---@field expand? fun():wk.Spec
+---@field category? string
+---@field order? number
+---@field category_order? string[]
 
 ---@class wk.Spec: {[number]: wk.Spec} , wk.Mapping
 ---@field [1]? string
@@ -71,6 +74,13 @@
 ---@field buffer? number|boolean
 ---@field mode? string|string[]
 ---@field cond? boolean|fun():boolean?
+---@field category? string
+---@field order? number
+---@field category_order? string[]
+
+---@class wk.Section
+---@field name string
+---@field items wk.Item[]
 
 ---@class wk.Win.opts: vim.api.keyset.win_config
 ---@field width? wk.Dim

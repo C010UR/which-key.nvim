@@ -14,6 +14,7 @@ in a popup as you type.
   Every mode can be enabled/disabled.
 - 🛠️ **Customizable Layouts**: choose from `classic`, `modern`, and `helix` presets or customize the window.
 - 🔄 **Flexible Sorting**: sort by `local`, `order`, `group`, `alphanum`, `mod`, `lower`, `icase`, `desc`, or `manual`.
+- 📂 **Categories**: group mappings into labeled sections per prefix, with custom category and item ordering.
 - 🎨 **Formatting**: customizable key labels and descriptions
 - 🖼️ **Icons**: integrates with [mini.icons](https://github.com/echasnovski/mini.icons) and [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
 - ⏱️ **Delay**: delay is independent of `timeoutlen`
@@ -158,6 +159,9 @@ local defaults = {
   --- * manual: the order the mappings were added
   --- * case: lower-case first
   sort = { "local", "order", "group", "alphanum", "mod" },
+  category = {
+    default = "Other", -- category for mappings without an explicit category
+  },
   ---@type number|fun(node: wk.Node):boolean?
   expand = 0, -- expand groups when <= n mappings
   -- expand = function(node)
@@ -267,6 +271,9 @@ A mapping has the following attributes:
 - **[2]**: (`string|fun()`) rhs **_(optional)_**: when present, it will create the mapping
 - **desc**: (`string|fun():string`) description **_(required for non-groups)_**
 - **group**: (`string|fun():string`) group name **_(optional)_**
+- **category**: (`string`) category section for the current popup **_(optional, inherited)_**
+- **order**: (`number`) sort priority within a category **_(optional, inherited)_**
+- **category_order**: (`string[]`) category order for a group popup **_(optional, group only)_**
 - **mode**: (`string|string[]`) mode **_(optional, defaults to `"n"`)_**
 - **cond**: (`boolean|fun():boolean`) condition to enable the mapping **_(optional)_**
 - **hidden**: (`boolean`) hide the mapping **_(optional)_**
@@ -287,10 +294,15 @@ Two examples are included in `which-key.extras`:
 ```lua
 local wk = require("which-key")
 wk.add({
+  {
+    "<leader>",
+    group = "Leader",
+    category_order = { "Files", "Git", "Search", "Other" },
+  },
   { "<leader>f", group = "file" }, -- group
-  { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find File", mode = "n" },
-  { "<leader>fb", function() print("hello") end, desc = "Foobar" },
-  { "<leader>fn", desc = "New File" },
+  { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find File", mode = "n", category = "Search", order = 1 },
+  { "<leader>fb", function() print("hello") end, desc = "Foobar", category = "Search", order = 2 },
+  { "<leader>fn", desc = "New File", category = "Files" },
   { "<leader>f1", hidden = true }, -- hide this keymap
   { "<leader>w", proxy = "<c-w>", group = "windows" }, -- proxy to window mappings
   { "<leader>b", group = "buffers", expand = function()
@@ -303,10 +315,15 @@ wk.add({
     -- There's no limit to the depth of nesting
     mode = { "n", "v" }, -- NORMAL and VISUAL mode
     { "<leader>q", "<cmd>q<cr>", desc = "Quit" }, -- no need to specify mode since it's inherited
-    { "<leader>w", "<cmd>w<cr>", desc = "Write" },
+    { "<leader>w", "<cmd>w<cr>", desc = "Write" }, -- goes to the default "Other" category
   }
 })
 ```
+
+Mappings without a `category` are shown in the default category (`Other` by default).
+Use `category_order` on a group to control section order for that prefix.
+Within each category, items are sorted with `Config.sort`. Use `order` for explicit
+priority, or include `"manual"` in `sort` to preserve registration order.
 
 ## 🎯 Triggers
 
@@ -443,6 +460,7 @@ The table below shows all the highlight groups defined for **WhichKey** with the
 | --- | --- | --- |
 | **WhichKey** | ***Function*** |  |
 | **WhichKeyBorder** | ***FloatBorder*** | Border of the which-key window |
+| **WhichKeyCategory** | ***Comment*** | category separator in the which-key window |
 | **WhichKeyDesc** | ***Identifier*** | description |
 | **WhichKeyGroup** | ***Keyword*** | group name |
 | **WhichKeyIcon** | ***@markup.link*** | icons |

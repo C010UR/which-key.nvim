@@ -264,6 +264,80 @@ function M.expand(root, node, expand, filter, ret)
   return ret
 end
 
+---@param name string
+---@param width number
+---@return string
+function M.category_separator(name, width)
+  local dw = vim.fn.strdisplaywidth
+  local line = "-- " .. name .. " "
+  while dw(line) < width do
+    line = line .. "-"
+  end
+  return line
+end
+
+---@param items wk.Item[]
+---@param node wk.Node
+---@return wk.Section[]
+function M.categorize(items, node)
+  local default = Config.category.default
+  local buckets = {} ---@type table<string, wk.Item[]>
+
+  for _, item in ipairs(items) do
+    local cat = item.category or default
+    buckets[cat] = buckets[cat] or {}
+    buckets[cat][#buckets[cat] + 1] = item
+  end
+
+  local category_order = node.mapping and node.mapping.category_order
+  local sections = {} ---@type wk.Section[]
+
+  local function add_section(name)
+    local section_items = buckets[name]
+    if section_items and #section_items > 0 then
+      sections[#sections + 1] = { name = name, items = section_items }
+    end
+  end
+
+  local function sort_remaining(names)
+    table.sort(names, function(a, b)
+      if a == default then
+        return false
+      end
+      if b == default then
+        return true
+      end
+      return a < b
+    end)
+  end
+
+  if category_order then
+    local seen = {}
+    for _, name in ipairs(category_order) do
+      add_section(name)
+      seen[name] = true
+    end
+    local remaining = {}
+    for name in pairs(buckets) do
+      if not seen[name] and #buckets[name] > 0 then
+        remaining[#remaining + 1] = name
+      end
+    end
+    sort_remaining(remaining)
+    for _, name in ipairs(remaining) do
+      add_section(name)
+    end
+  else
+    local names = vim.tbl_keys(buckets)
+    sort_remaining(names)
+    for _, name in ipairs(names) do
+      add_section(name)
+    end
+  end
+
+  return sections
+end
+
 function M.show()
   local state = State.state
   if not (state and state.show and state.node:is_group()) then
@@ -317,8 +391,6 @@ function M.show()
     vim.list_extend(items, M.expand(state.node, node, expand, filter))
   end
 
-  M.sort(items)
-
   ---@type wk.Col[]
   local cols = {
     { key = "key", hl = "WhichKey", align = "right" },
@@ -341,38 +413,56 @@ function M.show()
   local box_width = Layout.dim(max_row_width, container.width, Config.layout.width)
   local box_count = math.max(math.floor(container.width / (box_width + Config.layout.spacing)), 1)
   box_width = math.floor(container.width / box_count)
-  local box_height = math.max(math.ceil(#items / box_count), 2)
+  local separator_width = box_count * box_width + (box_count - 1) * Config.layout.spacing
 
-  local rows = t:layout({ width = box_width - Config.layout.spacing })
+  local sections = M.categorize(items, state.node)
+
+  ---@param section_items wk.Item[]
+  local function render_grid(section_items)
+    M.sort(section_items)
+    local layout = Layout.new({ cols = cols, rows = section_items })
+    local box_height = math.max(math.ceil(#section_items / box_count), 2)
+    local rows = layout:layout({ width = box_width - Config.layout.spacing })
+    for l = 1, box_height do
+      text:append(string.rep(" ", Config.win.padding[2]))
+      for b = 1, box_count do
+        local i = (b - 1) * box_height + l
+        local item = section_items[i]
+        local row = rows[i]
+        if b ~= 1 or box_count > 1 then
+          text:append(string.rep(" ", Config.layout.spacing))
+        end
+        if item and row then
+          for c, col in ipairs(row) do
+            local hl = col.hl
+            if cols[c].key == "desc" then
+              hl = item.group and "WhichKeyGroup" or "WhichKeyDesc"
+            end
+            if cols[c].key == "icon" then
+              hl = item.icon_hl
+            end
+            text:append(col.value, hl)
+          end
+        end
+      end
+      text:append(string.rep(" ", Config.win.padding[2]))
+      text:nl()
+    end
+  end
 
   for _ = 1, Config.win.padding[1] + 1 do
     text:nl()
   end
 
-  for l = 1, box_height do
-    text:append(string.rep(" ", Config.win.padding[2]))
-    for b = 1, box_count do
-      local i = (b - 1) * box_height + l
-      local item = items[i]
-      local row = rows[i]
-      if b ~= 1 or box_count > 1 then
-        text:append(string.rep(" ", Config.layout.spacing))
-      end
-      if item then
-        for c, col in ipairs(row) do
-          local hl = col.hl
-          if cols[c].key == "desc" then
-            hl = item.group and "WhichKeyGroup" or "WhichKeyDesc"
-          end
-          if cols[c].key == "icon" then
-            hl = item.icon_hl
-          end
-          text:append(col.value, hl)
-        end
-      end
+  for i, section in ipairs(sections) do
+    if i > 1 then
+      text:nl()
     end
     text:append(string.rep(" ", Config.win.padding[2]))
+    text:append(M.category_separator(section.name, separator_width), "WhichKeyCategory")
+    text:append(string.rep(" ", Config.win.padding[2]))
     text:nl()
+    render_grid(section.items)
   end
   text:trim()
 

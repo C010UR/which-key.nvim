@@ -49,6 +49,9 @@ M.fields = {
   real = { inherit = true },
   proxy = {},
   expand = {},
+  category = { inherit = true },
+  order = { inherit = true },
+  category_order = {},
   -- deprecated
   name = { transform = "group", deprecated = true },
   prefix = { inherit = true, deprecated = true },

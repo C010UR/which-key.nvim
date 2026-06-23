@@ -8,6 +8,7 @@ M.colors = {
   Normal = "NormalFloat", -- Normal in th which-key window
   Title = "FloatTitle", -- Title of the which-key window
   Border = "FloatBorder", -- Border of the which-key window
+  Category = "Comment", -- category separator in the which-key window
   Value = "Comment", -- values by plugins (like marks, registers, etc)
   Icon = "@markup.link", -- icons
   IconAzure = "Function",
