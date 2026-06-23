@@ -269,7 +269,7 @@ end
 ---@return wk.Segment[]
 function M.category_separator(name, width)
   local dw = vim.fn.strdisplaywidth
-  local hl = "WhichKeyBorder"
+  local hl = "WhichKeyCategory"
   local left = "─"
   local label = " " .. name .. " "
   local used = dw(left) + dw(label)
